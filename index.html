@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>靈感抽卡</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: #f0ebe3;
+  --surface: #faf7f2;
+  --border: rgba(180,140,100,0.2);
+  --text: #3a2e24;
+  --text-muted: rgba(100,75,50,0.5);
+  --accent: #c4693a;
+  --accent-light: rgba(196,105,58,0.12);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  min-height: 100vh;
+  padding-top: max(44px, env(safe-area-inset-top));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+/* Pages */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ===== HOME PAGE ===== */
+.home-header {
+  padding: 20px 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.home-title { font-size: 22px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; }
+.home-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.backpack-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  -webkit-appearance: none;
+}
+.backpack-badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pools-carousel {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  display: flex;
+  gap: 14px;
+  padding: 8px 20px 24px;
+  scrollbar-width: none;
+}
+.pools-carousel::-webkit-scrollbar { display: none; }
+
+.pool-card {
+  flex-shrink: 0;
+  width: calc(80vw);
+  max-width: 300px;
+  min-height: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 28px 24px 24px;
+  cursor: pointer;
+  scroll-snap-align: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-shadow: 0 4px 20px rgba(180,120,60,0.08);
+}
+.pool-card:active { transform: scale(0.97); }
+.pool-icon-wrap {
+  width: 72px; height: 72px;
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+.pool-icon-wrap svg { width: 36px; height: 36px; }
+.pool-name { font-size: 20px; font-weight: 500; color: var(--text); }
+.pool-count { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.pool-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+.pool-dot {
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: rgba(196,105,58,0.2);
+  transition: all 0.2s;
+}
+.pool-dot.active {
+  width: 18px;
+  background: var(--accent);
+}
+
+/* Pool colors */
+.pool-art .pool-icon-wrap { background: #f5e6d3; }
+.pool-art svg { stroke: #c4693a; }
+.pool-code .pool-icon-wrap { background: #ddeedd; }
+.pool-code svg { stroke: #5a8a5a; }
+.pool-3d .pool-icon-wrap { background: #dde6f5; }
+.pool-3d svg { stroke: #4a6a9a; }
+.pool-home .pool-icon-wrap { background: #f5eedd; }
+.pool-home svg { stroke: #9a7a3a; }
+
+/* ===== DRAW PAGE ===== */
+.draw-header {
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 0.5px solid var(--border);
+}
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  -webkit-appearance: none;
+}
+.draw-pool-name { font-size: 17px; font-weight: 500; }
+.draw-pool-count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+.draw-area {
+  padding: 30px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Flip card */
+.flip-card-container {
+  width: 100%;
+  max-width: 320px;
+  height: 200px;
+  perspective: 1000px;
+  cursor: pointer;
+  margin-bottom: 24px;
+}
+.flip-card {
+  width: 100%; height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.flip-card.flipped { transform: rotateY(180deg); }
+.flip-front, .flip-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.flip-front {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(180,120,60,0.1);
+}
+.flip-front-icon { font-size: 36px; margin-bottom: 10px; }
+.flip-front-hint { font-size: 13px; color: var(--text-muted); }
+.flip-back {
+  background: var(--surface);
+  border: 1px solid rgba(196,105,58,0.3);
+  border-left: 4px solid var(--accent);
+  box-shadow: 0 4px 20px rgba(180,120,60,0.15);
+  transform: rotateY(180deg);
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+.flip-back-title { font-size: 20px; font-weight: 600; color: var(--accent); line-height: 1.3; margin-bottom: 10px; }
+.flip-back-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+.flip-back-date { font-size: 11px; color: rgba(100,75,50,0.35); margin-top: auto; }
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+/* Draw actions */
+.draw-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 14px;
+}
+.action-btn {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+  text-align: center;
+}
+.action-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 500; }
+.action-btn.secondary { color: var(--text-muted); }
+
+.redraw-btn {
+  width: 100%;
+  max-width: 320px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(196,105,58,0.3);
+  background: none;
+  color: var(--accent);
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+
+/* Card list below */
+.card-list-section {
+  padding: 0 20px 20px;
+}
+.section-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.card-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-item-title { font-size: 14px; flex: 1; }
+.card-item-status {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.status-pool { background: rgba(196,105,58,0.1); color: var(--accent); }
+.status-bag { background: rgba(90,138,90,0.1); color: #5a8a5a; }
+.status-done { background: rgba(150,150,150,0.1); color: #999; }
+.card-item-del {
+  background: none;
+  border: none;
+  color: rgba(100,75,50,0.3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 2px;
+  -webkit-appearance: none;
+}
+
+/* ===== BACKPACK PAGE ===== */
+.backpack-header {
+  padding: 16px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 0.5px solid var(--border);
+}
+.backpack-list { padding: 16px 20px; }
+.backpack-section-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 14px 0 8px;
+}
+.backpack-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.backpack-item.done {
+  border-left-color: #aaa;
+  opacity: 0.6;
+}
+.backpack-item-pool { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+.backpack-item-title { font-size: 14px; font-weight: 500; }
+.backpack-item-date { font-size: 11px; color: rgba(100,75,50,0.35); margin-top: 4px; }
+.backpack-item-actions { display: flex; gap: 8px; margin-top: 10px; }
+.mini-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+.mini-btn.done-btn { border-color: rgba(90,138,90,0.3); color: #5a8a5a; }
+.mini-btn.return-btn { border-color: var(--border); }
+
+/* ===== ADD CARD MODAL ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px max(28px, env(safe-area-inset-bottom));
+  width: 100vw;
+  max-width: 480px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.modal-sheet h3 { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
+.modal-input {
+  width: 100%;
+  max-width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+.modal-input::placeholder { color: var(--text-muted); }
+.modal-textarea {
+  width: 100%;
+  max-width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  resize: none;
+  height: 80px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+.modal-textarea::placeholder { color: var(--text-muted); }
+.modal-actions { display: flex; gap: 8px; }
+.modal-btn {
+  flex: 1; padding: 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+}
+.modal-btn.confirm { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Milestone overlay */
+.milestone-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.milestone-overlay.open { display: flex; }
+.milestone-box {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 36px 32px;
+  text-align: center;
+  max-width: 280px;
+}
+.milestone-emoji { font-size: 48px; margin-bottom: 12px; }
+.milestone-title { font-size: 20px; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+.milestone-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+.milestone-close {
+  margin-top: 20px;
+  padding: 10px 32px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+</style>
+</head>
+<body>
+
+<!-- HOME PAGE -->
+<div class="page active" id="page-home">
+  <div class="home-header">
+    <div>
+      <div class="home-title">靈感抽卡</div>
+      <div class="home-subtitle">選一個卡池開始抽吧</div>
+    </div>
+    <button class="backpack-btn" id="open-backpack-btn">
+      🎒 背包 <span class="backpack-badge" id="backpack-badge">0</span>
+    </button>
+  </div>
+  <div class="pools-carousel" id="pools-grid"></div>
+  <div class="pool-dots" id="pool-dots"></div>
+  <div style="padding: 8px 20px 20px;">
+    <button id="global-add-btn" style="width:100%;padding:14px;border-radius:14px;border:1.5px dashed rgba(196,105,58,0.35);background:none;color:var(--accent);font-size:15px;cursor:pointer;font-family:inherit;-webkit-appearance:none;">+ 新增靈感點子</button>
+  </div>
+</div>
+
+<!-- DRAW PAGE -->
+<div class="page" id="page-draw">
+  <div class="draw-header">
+    <button class="back-btn" id="draw-back-btn">‹</button>
+    <div class="draw-pool-name" id="draw-pool-name"></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <div class="draw-pool-count" id="draw-pool-count"></div>
+      <button id="draw-add-btn" style="background:rgba(196,105,58,0.1);border:none;color:var(--accent);width:28px;height:28px;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-appearance:none;">+</button>
+    </div>
+  </div>
+  <div class="draw-area">
+    <div class="flip-card-container" id="flip-container">
+      <div class="flip-card" id="flip-card">
+        <div class="flip-front">
+          <div class="flip-front-icon" id="flip-front-icon">🎴</div>
+          <div class="flip-front-hint">點擊翻牌</div>
+        </div>
+        <div class="flip-back">
+          <div class="flip-back-title" id="flip-title"></div>
+          <div class="flip-back-desc" id="flip-desc"></div>
+          <div class="flip-back-date" id="flip-date"></div>
+        </div>
+      </div>
+    </div>
+    <div id="draw-actions-wrap" style="display:none;width:100%;max-width:320px;">
+      <div class="draw-actions">
+        <button class="action-btn primary" id="to-bag-btn">放入背包</button>
+        <button class="action-btn secondary" id="return-pool-btn">丟回卡池</button>
+      </div>
+      <button class="redraw-btn" id="redraw-btn">再抽一張</button>
+    </div>
+    <div id="empty-draw" style="display:none;" class="empty-state">
+      <div class="empty-icon">🃏</div>
+      <div>卡池空了，先新增一些點子吧！</div>
+    </div>
+  </div>
+  <div class="card-list-section">
+    <div class="section-title">卡池中的點子</div>
+    <div id="pool-card-list"></div>
+  </div>
+</div>
+
+<!-- BACKPACK PAGE -->
+<div class="page" id="page-backpack">
+  <div class="backpack-header">
+    <button class="back-btn" id="backpack-back-btn">‹</button>
+    <div class="draw-pool-name">🎒 背包</div>
+  </div>
+  <div class="backpack-list" id="backpack-list"></div>
+</div>
+
+<!-- ADD CARD MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal-sheet">
+    <h3 id="add-modal-title">新增靈感點子</h3>
+    <input class="modal-input" id="card-title-input" placeholder="點子標題..." maxlength="30" />
+    <textarea class="modal-textarea" id="card-desc-input" placeholder="細節描述（可以不填）"></textarea>
+    <div id="pool-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="add-cancel-btn">取消</button>
+      <button class="modal-btn confirm" id="add-confirm-btn">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- MILESTONE -->
+<div class="milestone-overlay" id="milestone-overlay">
+  <div class="milestone-box">
+    <div class="milestone-emoji" id="milestone-emoji">🎉</div>
+    <div class="milestone-title" id="milestone-title"></div>
+    <div class="milestone-desc" id="milestone-desc"></div>
+    <button class="milestone-close" id="milestone-close">太好了！</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'pipi_idea_cards_v1';
+
+const POOL_DEFS = [
+  {
+    id: 'art', name: '畫畫', cls: 'pool-art',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/><circle cx="6.5" cy="11.5" r="1.5"/><circle cx="9.5" cy="7.5" r="1.5"/><circle cx="14.5" cy="7.5" r="1.5"/><circle cx="17.5" cy="11.5" r="1.5"/></svg>`
+  },
+  {
+    id: 'code', name: '程式', cls: 'pool-code',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`
+  },
+  {
+    id: '3d', name: '3D列印', cls: 'pool-3d',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 4.9V17L12 22 3 17V6.9L12 2z"/><polyline points="12 22 12 12"/><polyline points="21 7 12 12 3 7"/></svg>`
+  },
+  {
+    id: 'home', name: '居家', cls: 'pool-home',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+  },
+];
+
+const MILESTONES = {
+  10: { emoji: '✨', title: '第10張！', desc: '靈感開始湧現了，繼續加油！' },
+  30: { emoji: '🌟', title: '30個點子！', desc: '創意滿滿的人，真厲害！' },
+  50: { emoji: '🎊', title: '50張里程碑！', desc: '妳是真正的創意達人！' },
+  100: { emoji: '🏆', title: '100張！', desc: '傳奇級靈感收藏家，無人能敵！' },
+};
+
+function loadData() {
+  try {
+    const d = localStorage.getItem(STORAGE_KEY);
+    if (d) return JSON.parse(d);
+  } catch(e) {}
+  return { pools: {}, milestoneShown: {} };
+}
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); } catch(e) {}
+}
+
+let appData = loadData();
+if (!appData.pools) appData.pools = {};
+if (!appData.milestoneShown) appData.milestoneShown = {};
+POOL_DEFS.forEach(p => { if (!appData.pools[p.id]) appData.pools[p.id] = []; });
+
+let currentPoolId = null;
+let currentCardIdx = -1;
+let addingPoolId = null;
+
+// ===== NAVIGATION =====
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+}
+
+// ===== HOME =====
+function renderHome() {
+  const grid = document.getElementById('pools-grid');
+  grid.innerHTML = '';
+  let bagCount = 0;
+  POOL_DEFS.forEach((pool, i) => {
+    const cards = appData.pools[pool.id] || [];
+    const inPool = cards.filter(c => c.status === 'pool').length;
+    bagCount += cards.filter(c => c.status === 'bag').length;
+    const el = document.createElement('div');
+    el.className = 'pool-card ' + pool.cls;
+    el.innerHTML = `
+      <div class="pool-icon-wrap">${pool.icon}</div>
+      <div class="pool-name">${pool.name}</div>
+      <div class="pool-count">${inPool} 張待抽</div>
+    `;
+    el.addEventListener('click', () => openDrawPage(pool.id));
+    grid.appendChild(el);
+  });
+  document.getElementById('backpack-badge').textContent = bagCount;
+
+  // Dots
+  const dotsEl = document.getElementById('pool-dots');
+  dotsEl.innerHTML = '';
+  POOL_DEFS.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'pool-dot' + (i === 0 ? ' active' : '');
+    dotsEl.appendChild(dot);
+  });
+  grid.addEventListener('scroll', () => {
+    const idx = Math.round(grid.scrollLeft / (grid.offsetWidth * 0.8));
+    document.querySelectorAll('.pool-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+    });
+  }, { passive: true });
+}
+
+// ===== DRAW PAGE =====
+function openDrawPage(poolId) {
+  currentPoolId = poolId;
+  currentCardIdx = -1;
+  const pool = POOL_DEFS.find(p => p.id === poolId);
+  document.getElementById('draw-pool-name').textContent = pool.name;
+  document.getElementById('flip-front-icon').textContent = '🎴';
+  document.getElementById('flip-card').classList.remove('flipped');
+  document.getElementById('draw-actions-wrap').style.display = 'none';
+  document.getElementById('empty-draw').style.display = 'none';
+  renderPoolCardList();
+  updateDrawCount();
+  showPage('draw');
+}
+
+function updateDrawCount() {
+  const cards = appData.pools[currentPoolId] || [];
+  const available = cards.filter(c => c.status === 'pool');
+  document.getElementById('draw-pool-count').textContent = available.length + ' 張';
+}
+
+function drawCard() {
+  const cards = appData.pools[currentPoolId] || [];
+  const available = cards.filter(c => c.status === 'pool');
+  if (available.length === 0) {
+    document.getElementById('flip-card').classList.remove('flipped');
+    document.getElementById('draw-actions-wrap').style.display = 'none';
+    document.getElementById('empty-draw').style.display = 'block';
+    currentCardIdx = -1;
+    return;
+  }
+  document.getElementById('empty-draw').style.display = 'none';
+  const pick = available[Math.floor(Math.random() * available.length)];
+  currentCardIdx = cards.indexOf(pick);
+  document.getElementById('flip-title').textContent = pick.title;
+  document.getElementById('flip-desc').textContent = pick.desc || '';
+  document.getElementById('flip-date').textContent = pick.date ? '加入於 ' + pick.date.replace(/-/g,'/') : '';
+  document.getElementById('flip-card').classList.remove('flipped');
+  setTimeout(() => {
+    document.getElementById('flip-card').classList.add('flipped');
+    document.getElementById('draw-actions-wrap').style.display = 'block';
+  }, 50);
+}
+
+document.getElementById('flip-container').addEventListener('click', () => {
+  if (!document.getElementById('flip-card').classList.contains('flipped')) {
+    drawCard();
+  }
+});
+
+document.getElementById('redraw-btn').addEventListener('click', () => {
+  document.getElementById('flip-card').classList.remove('flipped');
+  document.getElementById('draw-actions-wrap').style.display = 'none';
+  currentCardIdx = -1;
+  setTimeout(drawCard, 300);
+});
+
+document.getElementById('to-bag-btn').addEventListener('click', () => {
+  if (currentCardIdx < 0) return;
+  appData.pools[currentPoolId][currentCardIdx].status = 'bag';
+  appData.pools[currentPoolId][currentCardIdx].bagDate = new Date().toISOString().split('T')[0];
+  saveData();
+  renderHome();
+  renderPoolCardList();
+  updateDrawCount();
+  document.getElementById('flip-card').classList.remove('flipped');
+  document.getElementById('draw-actions-wrap').style.display = 'none';
+  currentCardIdx = -1;
+});
+
+document.getElementById('return-pool-btn').addEventListener('click', () => {
+  document.getElementById('flip-card').classList.remove('flipped');
+  document.getElementById('draw-actions-wrap').style.display = 'none';
+  currentCardIdx = -1;
+  setTimeout(drawCard, 300);
+});
+
+document.getElementById('draw-back-btn').addEventListener('click', () => {
+  renderHome();
+  showPage('home');
+});
+
+document.getElementById('draw-add-btn').addEventListener('click', () => {
+  openAddModal(currentPoolId);
+});
+
+function renderPoolCardList() {
+  const list = document.getElementById('pool-card-list');
+  const cards = appData.pools[currentPoolId] || [];
+  const poolCards = cards.filter(c => c.status === 'pool');
+  list.innerHTML = '';
+  if (poolCards.length === 0) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0;">還沒有點子，按右上角+新增</div>';
+    return;
+  }
+  poolCards.forEach((card, _) => {
+    const realIdx = cards.indexOf(card);
+    const el = document.createElement('div');
+    el.className = 'card-item';
+    el.innerHTML = `
+      <div class="card-item-title">${card.title}</div>
+      <button class="card-item-del" data-idx="${realIdx}">×</button>
+    `;
+    el.querySelector('.card-item-del').addEventListener('click', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      appData.pools[currentPoolId].splice(idx, 1);
+      saveData();
+      renderHome();
+      renderPoolCardList();
+      updateDrawCount();
+    });
+    list.appendChild(el);
+  });
+}
+
+// ===== BACKPACK PAGE =====
+document.getElementById('open-backpack-btn').addEventListener('click', () => {
+  renderBackpack();
+  showPage('backpack');
+});
+document.getElementById('backpack-back-btn').addEventListener('click', () => {
+  renderHome();
+  showPage('home');
+});
+
+function renderBackpack() {
+  const list = document.getElementById('backpack-list');
+  list.innerHTML = '';
+  let hasBag = false, hasDone = false;
+
+  // Check auto-return (7 days)
+  const today = new Date(); today.setHours(0,0,0,0);
+  POOL_DEFS.forEach(pool => {
+    (appData.pools[pool.id] || []).forEach(card => {
+      if (card.status === 'bag' && card.bagDate) {
+        const bagDay = new Date(card.bagDate); bagDay.setHours(0,0,0,0);
+        const diff = (today - bagDay) / (1000*60*60*24);
+        if (diff >= 7) { card.status = 'pool'; delete card.bagDate; }
+      }
+    });
+  });
+  saveData();
+
+  const bagTitle = document.createElement('div');
+  bagTitle.className = 'backpack-section-title';
+  bagTitle.textContent = '進行中';
+  const doneTitle = document.createElement('div');
+  doneTitle.className = 'backpack-section-title';
+  doneTitle.textContent = '已完成';
+
+  POOL_DEFS.forEach(pool => {
+    (appData.pools[pool.id] || []).forEach((card, idx) => {
+      if (card.status !== 'bag' && card.status !== 'done') return;
+      if (card.status === 'bag') hasBag = true;
+      if (card.status === 'done') hasDone = true;
+      const el = document.createElement('div');
+      el.className = 'backpack-item' + (card.status === 'done' ? ' done' : '');
+      const daysLeft = card.bagDate ? (() => {
+        const bd = new Date(card.bagDate); bd.setHours(0,0,0,0);
+        return 7 - Math.floor((today - bd)/(1000*60*60*24));
+      })() : null;
+      el.innerHTML = `
+        <div class="backpack-item-pool">${pool.name}</div>
+        <div class="backpack-item-title">${card.title}</div>
+        <div class="backpack-item-date">${card.status === 'bag' && daysLeft !== null ? `${daysLeft} 天後自動回卡池` : card.status === 'done' ? '已完成 🎉' : ''}</div>
+        ${card.status === 'bag' ? `<div class="backpack-item-actions">
+          <button class="mini-btn done-btn" data-pool="${pool.id}" data-idx="${idx}">✓ 完成了</button>
+          <button class="mini-btn return-btn" data-pool="${pool.id}" data-idx="${idx}" data-action="return">丟回卡池</button>
+        </div>` : ''}
+      `;
+      if (card.status === 'bag') {
+        el.querySelector('.done-btn').addEventListener('click', (e) => {
+          const p = e.target.dataset.pool, i = parseInt(e.target.dataset.idx);
+          appData.pools[p][i].status = 'done';
+          saveData();
+          renderBackpack();
+          renderHome();
+          checkMilestone();
+        });
+        el.querySelector('.return-btn').addEventListener('click', (e) => {
+          const p = e.target.dataset.pool, i = parseInt(e.target.dataset.idx);
+          appData.pools[p][i].status = 'pool';
+          delete appData.pools[p][i].bagDate;
+          saveData();
+          renderBackpack();
+          renderHome();
+        });
+      }
+      if (card.status === 'bag') {
+        if (!list.contains(bagTitle)) list.appendChild(bagTitle);
+      } else {
+        if (!list.contains(doneTitle)) list.appendChild(doneTitle);
+      }
+      list.appendChild(el);
+    });
+  });
+
+  if (!hasBag && !hasDone) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:14px;">背包是空的<br><br>抽到喜歡的點子就放進來吧！</div>';
+  }
+}
+
+function checkMilestone() {
+  const total = POOL_DEFS.reduce((sum, pool) => {
+    return sum + (appData.pools[pool.id] || []).filter(c => c.status === 'done').length;
+  }, 0);
+  const keys = Object.keys(MILESTONES).map(Number).sort((a,b)=>a-b);
+  for (const k of keys) {
+    if (total >= k && !appData.milestoneShown[k]) {
+      appData.milestoneShown[k] = true;
+      saveData();
+      showMilestone(MILESTONES[k]);
+      break;
+    }
+  }
+}
+
+function showMilestone(m) {
+  document.getElementById('milestone-emoji').textContent = m.emoji;
+  document.getElementById('milestone-title').textContent = m.title;
+  document.getElementById('milestone-desc').textContent = m.desc;
+  document.getElementById('milestone-overlay').classList.add('open');
+}
+document.getElementById('milestone-close').addEventListener('click', () => {
+  document.getElementById('milestone-overlay').classList.remove('open');
+});
+
+// ===== ADD CARD MODAL =====
+function openAddModal(poolId) {
+  addingPoolId = poolId;
+  document.getElementById('card-title-input').value = '';
+  document.getElementById('card-desc-input').value = '';
+  // Pool selector
+  const sel = document.getElementById('pool-selector');
+  sel.innerHTML = '';
+  POOL_DEFS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.textContent = p.name;
+    btn.dataset.pool = p.id;
+    btn.style.cssText = `padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:${poolId === p.id ? 'var(--accent)' : 'none'};color:${poolId === p.id ? '#fff' : 'var(--text-muted)'};font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none;transition:all 0.15s;`;
+    btn.addEventListener('click', () => {
+      addingPoolId = p.id;
+      sel.querySelectorAll('button').forEach(b => {
+        const active = b.dataset.pool === p.id;
+        b.style.background = active ? 'var(--accent)' : 'none';
+        b.style.color = active ? '#fff' : 'var(--text-muted)';
+      });
+    });
+    sel.appendChild(btn);
+  });
+  document.getElementById('add-modal').classList.add('open');
+  setTimeout(() => document.getElementById('card-title-input').focus(), 100);
+}
+
+document.getElementById('global-add-btn').addEventListener('click', () => {
+  openAddModal(POOL_DEFS[0].id);
+});
+
+document.getElementById('add-cancel-btn').addEventListener('click', () => {
+  document.getElementById('add-modal').classList.remove('open');
+});
+
+document.getElementById('add-confirm-btn').addEventListener('click', () => {
+  const title = document.getElementById('card-title-input').value.trim();
+  if (!title) return;
+  const desc = document.getElementById('card-desc-input').value.trim();
+  const date = new Date().toISOString().split('T')[0];
+  appData.pools[addingPoolId].push({ title, desc, date, status: 'pool' });
+  saveData();
+  renderHome();
+  if (currentPoolId === addingPoolId) {
+    renderPoolCardList();
+    updateDrawCount();
+  }
+  document.getElementById('add-modal').classList.remove('open');
+
+  // Check total card milestone
+  const total = POOL_DEFS.reduce((sum, p) => sum + (appData.pools[p.id]||[]).length, 0);
+  const keys = [10, 30, 50, 100];
+  for (const k of keys) {
+    if (total === k && !appData.milestoneShown['add_'+k]) {
+      appData.milestoneShown['add_'+k] = true;
+      saveData();
+      showMilestone({ emoji: '✨', title: `累計 ${k} 個點子！`, desc: '靈感好多，繼續加油！' });
+      break;
+    }
+  }
+});
+
+// Init
+renderHome();
+</script>
+</body>
+</html>
