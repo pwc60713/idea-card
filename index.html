@@ -444,8 +444,8 @@ body {
 <div class="page active" id="page-home">
   <div class="home-header">
     <div>
-      <div class="home-title">靈感抽卡</div>
-      <div class="home-subtitle">選一個卡池開始抽吧</div>
+      <div class="home-title" id="secret-title" style="cursor:default;">靈感抽卡</div>
+      <div class="home-subtitle" id="home-subtitle">選一個卡池開始抽吧</div>
     </div>
     <button class="backpack-btn" id="open-backpack-btn">
       🎒 背包 <span class="backpack-badge" id="backpack-badge">0</span>
@@ -519,6 +519,18 @@ body {
     <div class="modal-actions">
       <button class="modal-btn" id="add-cancel-btn">取消</button>
       <button class="modal-btn confirm" id="add-confirm-btn">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-sheet" style="max-width:480px;">
+    <h3 style="margin-bottom:8px;">刪除點子</h3>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;" id="confirm-msg"></p>
+    <div class="modal-actions">
+      <button class="modal-btn" id="confirm-cancel-btn">取消</button>
+      <button class="modal-btn" id="confirm-ok-btn" style="background:#d9534f;color:#fff;border-color:#d9534f;">刪除</button>
     </div>
   </div>
 </div>
@@ -912,6 +924,51 @@ document.getElementById('add-confirm-btn').addEventListener('click', () => {
       break;
     }
   }
+});
+
+// Secret easter eggs
+let secretTaps = 0;
+let secretTimer = null;
+const secretMessages = [
+  '🤫 偷偷告訴你，抽到空卡池試試看',
+  '✨ 你好奇心很重耶',
+  '🎯 第三下！你在測試我嗎',
+  '😂 好啦你發現了，繼續點點看',
+  '🌟 你是真正的探索者！',
+  '🏆 恭喜解鎖隱藏成就：手指停不下來',
+  '🐱 喵～',
+  '💫 再點一下試試',
+  '🎪 沒有了沒有了，真的沒了',
+  '😤 我說真的沒了！',
+  '🥲 好啦最後一個：皮皮加油！',
+];
+document.getElementById('secret-title').addEventListener('click', () => {
+  clearTimeout(secretTimer);
+  secretTaps++;
+  if (secretTaps > secretMessages.length) secretTaps = secretMessages.length;
+  const sub = document.getElementById('home-subtitle');
+  sub.textContent = secretMessages[secretTaps - 1];
+  sub.style.color = 'var(--accent)';
+  secretTimer = setTimeout(() => {
+    sub.textContent = '選一個卡池開始抽吧';
+    sub.style.color = 'var(--text-muted)';
+  }, 2500);
+});
+
+// Confirm delete modal
+let confirmCallback = null;
+function showConfirm(msg, cb) {
+  document.getElementById('confirm-msg').textContent = msg;
+  confirmCallback = cb;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
+  document.getElementById('confirm-modal').classList.remove('open');
+  confirmCallback = null;
+});
+document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+  document.getElementById('confirm-modal').classList.remove('open');
+  if (confirmCallback) { confirmCallback(); confirmCallback = null; }
 });
 
 // Init
