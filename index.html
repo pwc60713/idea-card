@@ -453,8 +453,13 @@ body {
   </div>
   <div class="pools-carousel" id="pools-grid"></div>
   <div class="pool-dots" id="pool-dots"></div>
-  <div style="padding: 8px 20px 20px;">
+  <div style="padding: 8px 20px 20px;display:flex;flex-direction:column;gap:8px;">
     <button id="global-add-btn" style="width:100%;padding:14px;border-radius:14px;border:1.5px dashed rgba(196,105,58,0.35);background:none;color:var(--accent);font-size:15px;cursor:pointer;font-family:inherit;-webkit-appearance:none;">+ 新增靈感點子</button>
+    <div style="display:flex;gap:8px;">
+      <button id="export-btn" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:none;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:inherit;-webkit-appearance:none;">📤 匯出備份</button>
+      <label for="import-input" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:none;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:inherit;text-align:center;display:block;">📥 匯入備份</label>
+      <input type="file" id="import-input" accept=".json" style="display:none;" />
+    </div>
   </div>
 </div>
 
@@ -523,6 +528,47 @@ body {
   </div>
 </div>
 
+<!-- EDIT CARD MODAL -->
+<div class="modal-overlay" id="edit-card-modal">
+  <div class="modal-sheet">
+    <h3>編輯點子</h3>
+    <input class="modal-input" id="edit-card-title" placeholder="點子標題..." maxlength="30" />
+    <textarea class="modal-textarea" id="edit-card-desc" placeholder="細節描述（可以不填）"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn" id="edit-card-cancel">取消</button>
+      <button class="modal-btn confirm" id="edit-card-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE POOL MODAL -->
+<div class="modal-overlay" id="manage-pool-modal">
+  <div class="modal-sheet">
+    <h3 id="manage-pool-title">管理卡池</h3>
+    <div id="manage-pool-list" style="margin-bottom:12px;"></div>
+    <div style="border-top:0.5px solid var(--border);padding-top:12px;">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">新增卡池</div>
+      <input class="modal-input" id="new-pool-name" placeholder="卡池名稱..." maxlength="10" style="margin-bottom:8px;" />
+      <button class="modal-btn confirm" id="new-pool-confirm" style="width:100%;">新增</button>
+    </div>
+    <div class="modal-actions" style="margin-top:10px;">
+      <button class="modal-btn" id="manage-pool-close">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT POOL MODAL -->
+<div class="modal-overlay" id="edit-pool-modal">
+  <div class="modal-sheet">
+    <h3>編輯卡池</h3>
+    <input class="modal-input" id="edit-pool-name" placeholder="卡池名稱..." maxlength="10" />
+    <div class="modal-actions">
+      <button class="modal-btn" id="edit-pool-cancel">取消</button>
+      <button class="modal-btn confirm" id="edit-pool-save">儲存</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM DELETE MODAL -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal-sheet" style="max-width:480px;">
@@ -548,24 +594,13 @@ body {
 <script>
 const STORAGE_KEY = 'pipi_idea_cards_v1';
 
-const POOL_DEFS = [
-  {
-    id: 'art', name: '畫畫', cls: 'pool-art',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/><circle cx="6.5" cy="11.5" r="1.5"/><circle cx="9.5" cy="7.5" r="1.5"/><circle cx="14.5" cy="7.5" r="1.5"/><circle cx="17.5" cy="11.5" r="1.5"/></svg>`
-  },
-  {
-    id: 'code', name: '程式', cls: 'pool-code',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`
-  },
-  {
-    id: '3d', name: '3D列印', cls: 'pool-3d',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 4.9V17L12 22 3 17V6.9L12 2z"/><polyline points="12 22 12 12"/><polyline points="21 7 12 12 3 7"/></svg>`
-  },
-  {
-    id: 'home', name: '居家', cls: 'pool-home',
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
-  },
+const DEFAULT_POOL_DEFS = [
+  { id: 'art', name: '畫畫', cls: 'pool-art', icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/><circle cx="6.5" cy="11.5" r="1.5"/><circle cx="9.5" cy="7.5" r="1.5"/><circle cx="14.5" cy="7.5" r="1.5"/><circle cx="17.5" cy="11.5" r="1.5"/></svg>` },
+  { id: 'code', name: '程式', cls: 'pool-code', icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>` },
+  { id: '3d', name: '3D列印', cls: 'pool-3d', icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 4.9V17L12 22 3 17V6.9L12 2z"/><polyline points="12 22 12 12"/><polyline points="21 7 12 12 3 7"/></svg>` },
+  { id: 'home', name: '居家', cls: 'pool-home', icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>` },
 ];
+const CUSTOM_POOL_COLORS = ['pool-art','pool-code','pool-3d','pool-home'];
 
 const MILESTONES = {
   10: { emoji: '✨', title: '第10張！', desc: '靈感開始湧現了，繼續加油！' },
@@ -579,7 +614,7 @@ function loadData() {
     const d = localStorage.getItem(STORAGE_KEY);
     if (d) return JSON.parse(d);
   } catch(e) {}
-  return { pools: {}, milestoneShown: {} };
+  return { pools: {}, milestoneShown: {}, poolDefs: null };
 }
 function saveData() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); } catch(e) {}
@@ -588,6 +623,8 @@ function saveData() {
 let appData = loadData();
 if (!appData.pools) appData.pools = {};
 if (!appData.milestoneShown) appData.milestoneShown = {};
+if (!appData.poolDefs) appData.poolDefs = DEFAULT_POOL_DEFS.map(p => ({...p}));
+let POOL_DEFS = appData.poolDefs;
 POOL_DEFS.forEach(p => { if (!appData.pools[p.id]) appData.pools[p.id] = []; });
 
 let currentPoolId = null;
@@ -621,6 +658,14 @@ function renderHome() {
   });
   document.getElementById('backpack-badge').textContent = bagCount;
 
+  // Manage card
+  const manageEl = document.createElement('div');
+  manageEl.className = 'pool-card';
+  manageEl.style.cssText = 'border:1.5px dashed rgba(100,140,100,0.3);background:rgba(74,138,74,0.04);justify-content:center;align-items:center;';
+  manageEl.innerHTML = `<div style="text-align:center;"><div style="font-size:28px;color:var(--accent);margin-bottom:8px;">⚙️</div><div style="font-size:15px;color:var(--accent);font-weight:500;">管理卡池</div></div>`;
+  manageEl.onclick = () => openManagePoolModal();
+  grid.appendChild(manageEl);
+
   // Dots
   const dotsEl = document.getElementById('pool-dots');
   dotsEl.innerHTML = '';
@@ -629,8 +674,12 @@ function renderHome() {
     dot.className = 'pool-dot' + (i === 0 ? ' active' : '');
     dotsEl.appendChild(dot);
   });
+  const manageDot = document.createElement('div');
+  manageDot.className = 'pool-dot';
+  dotsEl.appendChild(manageDot);
   grid.addEventListener('scroll', () => {
-    const idx = Math.round(grid.scrollLeft / (grid.offsetWidth * 0.8));
+    const cardW = grid.querySelector('.pool-card').offsetWidth + 14;
+    const idx = Math.round(grid.scrollLeft / cardW);
     document.querySelectorAll('.pool-dot').forEach((d, i) => {
       d.classList.toggle('active', i === idx);
     });
@@ -737,9 +786,18 @@ function renderPoolCardList() {
     const el = document.createElement('div');
     el.className = 'card-item';
     el.innerHTML = `
-      <div class="card-item-title">${card.title}</div>
+      <div class="card-item-title" style="flex:1;">${card.title}</div>
+      <button class="card-item-edit" data-idx="${realIdx}" style="background:none;border:none;color:var(--text-muted);font-size:13px;padding:0 6px;cursor:pointer;">✏️</button>
       <button class="card-item-del" data-idx="${realIdx}">×</button>
     `;
+    el.querySelector('.card-item-edit').addEventListener('click', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      editingCardPool = currentPoolId;
+      editingCardIdx = idx;
+      document.getElementById('edit-card-title').value = appData.pools[currentPoolId][idx].title;
+      document.getElementById('edit-card-desc').value = appData.pools[currentPoolId][idx].desc || '';
+      document.getElementById('edit-card-modal').classList.add('open');
+    });
     el.querySelector('.card-item-del').addEventListener('click', (e) => {
       const idx = parseInt(e.target.dataset.idx);
       const title = appData.pools[currentPoolId][idx].title;
@@ -804,16 +862,19 @@ function renderBackpack() {
       el.innerHTML = `
         <div class="backpack-item-pool">${pool.name}</div>
         <div class="backpack-item-title">${card.title}</div>
-        <div class="backpack-item-date">${card.status === 'bag' && daysLeft !== null ? `${daysLeft} 天後自動回卡池` : card.status === 'done' ? '已完成 🎉' : ''}</div>
+        <div class="backpack-item-date">${card.status === 'bag' && daysLeft !== null ? `${daysLeft} 天後自動回卡池` : card.status === 'done' ? `完成於 ${card.doneDate ? card.doneDate.replace(/-/g,'/') : '某天'} 🎉` : ''}</div>
         ${card.status === 'bag' ? `<div class="backpack-item-actions">
           <button class="mini-btn done-btn" data-pool="${pool.id}" data-idx="${idx}">✓ 完成了</button>
           <button class="mini-btn return-btn" data-pool="${pool.id}" data-idx="${idx}" data-action="return">丟回卡池</button>
+        </div>` : card.status === 'done' ? `<div class="backpack-item-actions">
+          <button class="mini-btn return-btn" data-pool="${pool.id}" data-idx="${idx}" data-action="undone">↩ 取消完成</button>
         </div>` : ''}
       `;
       if (card.status === 'bag') {
         el.querySelector('.done-btn').addEventListener('click', (e) => {
           const p = e.target.dataset.pool, i = parseInt(e.target.dataset.idx);
           appData.pools[p][i].status = 'done';
+          appData.pools[p][i].doneDate = new Date().toISOString().split('T')[0];
           saveData();
           renderBackpack();
           renderHome();
@@ -823,6 +884,17 @@ function renderBackpack() {
           const p = e.target.dataset.pool, i = parseInt(e.target.dataset.idx);
           appData.pools[p][i].status = 'pool';
           delete appData.pools[p][i].bagDate;
+          saveData();
+          renderBackpack();
+          renderHome();
+        });
+      }
+      if (card.status === 'done') {
+        el.querySelector('.return-btn').addEventListener('click', (e) => {
+          const p = e.target.dataset.pool, i = parseInt(e.target.dataset.idx);
+          appData.pools[p][i].status = 'bag';
+          appData.pools[p][i].bagDate = new Date().toISOString().split('T')[0];
+          delete appData.pools[p][i].doneDate;
           saveData();
           renderBackpack();
           renderHome();
@@ -929,6 +1001,93 @@ document.getElementById('add-confirm-btn').addEventListener('click', () => {
   }
 });
 
+// Edit card modal
+let editingCardPool = null;
+let editingCardIdx = -1;
+document.getElementById('edit-card-cancel').onclick = () => document.getElementById('edit-card-modal').classList.remove('open');
+document.getElementById('edit-card-save').onclick = () => {
+  const title = document.getElementById('edit-card-title').value.trim();
+  if (!title) return;
+  if (editingCardPool && editingCardIdx >= 0) {
+    appData.pools[editingCardPool][editingCardIdx].title = title;
+    appData.pools[editingCardPool][editingCardIdx].desc = document.getElementById('edit-card-desc').value.trim();
+    saveData();
+    renderPoolCardList();
+  }
+  document.getElementById('edit-card-modal').classList.remove('open');
+};
+
+// Manage pool modal
+let editingPoolId = null;
+function openManagePoolModal() {
+  renderManagePoolList();
+  document.getElementById('new-pool-name').value = '';
+  document.getElementById('manage-pool-modal').classList.add('open');
+}
+function renderManagePoolList() {
+  const list = document.getElementById('manage-pool-list');
+  list.innerHTML = '';
+  POOL_DEFS.forEach((pool, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--border);';
+    row.innerHTML = `
+      <div style="flex:1;font-size:14px;">${pool.name}</div>
+      <button style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:none;font-size:12px;color:var(--text-muted);cursor:pointer;font-family:inherit;" data-pool="${pool.id}" class="edit-pool-btn">編輯</button>
+      <button style="padding:5px 12px;border-radius:8px;border:1px solid rgba(192,57,43,0.2);background:none;font-size:12px;color:#c0392b;cursor:pointer;font-family:inherit;" data-pool="${pool.id}" class="del-pool-btn">刪除</button>
+    `;
+    row.querySelector('.edit-pool-btn').onclick = () => {
+      editingPoolId = pool.id;
+      document.getElementById('edit-pool-name').value = pool.name;
+      document.getElementById('manage-pool-modal').classList.remove('open');
+      document.getElementById('edit-pool-modal').classList.add('open');
+    };
+    row.querySelector('.del-pool-btn').onclick = () => {
+      document.getElementById('manage-pool-modal').classList.remove('open');
+      showConfirm(`確定要刪除卡池「${pool.name}」嗎？裡面的點子也會一起刪除。`, () => {
+        appData.poolDefs = appData.poolDefs.filter(p => p.id !== pool.id);
+        POOL_DEFS = appData.poolDefs;
+        delete appData.pools[pool.id];
+        saveData();
+        renderHome();
+        openManagePoolModal();
+      });
+    };
+    list.appendChild(row);
+  });
+  if (POOL_DEFS.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px 0;">還沒有卡池</div>';
+  }
+}
+document.getElementById('manage-pool-close').onclick = () => document.getElementById('manage-pool-modal').classList.remove('open');
+document.getElementById('new-pool-confirm').onclick = () => {
+  const name = document.getElementById('new-pool-name').value.trim();
+  if (!name) return;
+  const id = 'custom_' + Date.now();
+  const clsIdx = POOL_DEFS.length % CUSTOM_POOL_COLORS.length;
+  appData.poolDefs.push({ id, name, cls: CUSTOM_POOL_COLORS[clsIdx], icon: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>` });
+  POOL_DEFS = appData.poolDefs;
+  appData.pools[id] = [];
+  saveData();
+  renderHome();
+  document.getElementById('new-pool-name').value = '';
+  renderManagePoolList();
+};
+
+// Edit pool name modal
+document.getElementById('edit-pool-cancel').onclick = () => {
+  document.getElementById('edit-pool-modal').classList.remove('open');
+  document.getElementById('manage-pool-modal').classList.add('open');
+};
+document.getElementById('edit-pool-save').onclick = () => {
+  const name = document.getElementById('edit-pool-name').value.trim();
+  if (!name || !editingPoolId) return;
+  const pool = appData.poolDefs.find(p => p.id === editingPoolId);
+  if (pool) { pool.name = name; saveData(); renderHome(); }
+  document.getElementById('edit-pool-modal').classList.remove('open');
+  renderManagePoolList();
+  document.getElementById('manage-pool-modal').classList.add('open');
+};
+
 // Secret easter eggs
 let secretTaps = 0;
 let secretTimer = null;
@@ -973,6 +1132,41 @@ document.getElementById('confirm-ok-btn').addEventListener('click', () => {
   document.getElementById('confirm-modal').classList.remove('open');
   if (confirmCallback) { confirmCallback(); confirmCallback = null; }
 });
+
+// Export/Import
+document.getElementById('export-btn').onclick = () => {
+  const data = JSON.stringify(appData, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'idea_cards_backup_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+document.getElementById('import-input').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!imported.pools) throw new Error();
+      showConfirm('匯入後會覆蓋目前所有資料，確定嗎？', () => {
+        appData = imported;
+        if (!appData.poolDefs) appData.poolDefs = DEFAULT_POOL_DEFS.map(p=>({...p}));
+        POOL_DEFS = appData.poolDefs;
+        saveData();
+        renderHome();
+      });
+    } catch(err) {
+      alert('檔案格式不對，請選擇正確的備份檔案');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
 
 // Init
 renderHome();
