@@ -742,11 +742,14 @@ function renderPoolCardList() {
     `;
     el.querySelector('.card-item-del').addEventListener('click', (e) => {
       const idx = parseInt(e.target.dataset.idx);
-      appData.pools[currentPoolId].splice(idx, 1);
-      saveData();
-      renderHome();
-      renderPoolCardList();
-      updateDrawCount();
+      const title = appData.pools[currentPoolId][idx].title;
+      showConfirm(`確定要刪除「${title}」嗎？`, () => {
+        appData.pools[currentPoolId].splice(idx, 1);
+        saveData();
+        renderHome();
+        renderPoolCardList();
+        updateDrawCount();
+      });
     });
     list.appendChild(el);
   });
